@@ -1,0 +1,87 @@
+module "vpc" {
+  source           = "./modules/vpc"
+  vpc_cidr         = var.vpc_cidr
+  public_subnets   = var.public_subnets
+  private_subnets  = var.private_subnets
+}
+
+module "sg" {
+  source = "./modules/sg"
+  vpc_id = module.vpc.vpc_id
+}
+
+module "ec2" {
+  source            = "./modules/ec2"
+  vpc_id            = module.vpc.vpc_id
+  public_subnet_ids = module.vpc.public_subnet_ids
+  sg_id             = module.sg.ec2_sg_id
+  ami_id            = var.ami_id
+  instance_type     = var.instance_type
+}
+
+module "alb" {
+  source              = "./modules/alb"
+  vpc_id              = module.vpc.vpc_id
+  public_subnet_ids   = module.vpc.public_subnet_ids
+  ec2_instance_ids    = module.ec2.instance_ids
+  sg_id               = module.sg.alb_sg_id
+}
+
+module "rds" {
+  source       = "./modules/rds"
+  vpc_id       = module.vpc.vpc_id
+  subnet_ids   = module.vpc.private_subnet_ids
+  sg_id        = module.sg.rds_sg_id
+  username     = var.rds_username
+  password     = var.rds_password
+}
+
+module "s3" {
+  source      = "./modules/s3"
+  bucket_name = var.s3_bucket_name
+}
+
+module "cloudwatch" {
+  source           = "./modules/cloudwatch"
+  ec2_instance_ids = module.ec2.instance_ids
+  s3_bucket_name   = var.s3_bucket_name
+  rds_instance_id  = module.rds.db_instance_id
+}
+
+module "ecr" {
+  source = "./modules/ecr"
+}
+
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "18.31.2"
+
+  cluster_name    = var.cluster_name
+  cluster_version = var.cluster_version
+  subnets         = var.private_subnets
+  vpc_id          = var.vpc_id
+
+  enable_irsa = true
+
+  manage_aws_auth = true
+
+  aws_auth_roles = [
+    {
+      rolearn  = var.admin_role_arn
+      username = "admin"
+      groups   = ["system:masters"]
+    }
+  ]
+
+  node_groups = {
+    default = {
+      desired_capacity = 2
+      max_capacity     = 3
+      min_capacity     = 1
+
+      instance_types = ["t3.medium"]
+
+      subnet_ids = var.private_subnets
+    }
+  }
+}
