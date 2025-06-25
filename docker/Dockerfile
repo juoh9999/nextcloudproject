@@ -1,13 +1,15 @@
-FROM nextcloud:27-apache
+# 베이스 이미지 설정
+FROM node:18
 
-# 필요한 경우 추가 설정 (예: PHP 모듈 설치)
-RUN docker-php-ext-install pdo_mysql
+# 애플리케이션 디렉토리 생성 및 설정
+WORKDIR /app
 
-# 예시: 커스텀 테마 또는 설정 복사
-COPY custom-theme /var/www/html/themes/custom-theme
+# 소스 복사 및 의존성 설치
+COPY package*.json ./
+RUN npm install
 
-# 예시: crontab 설정
-COPY cron/nextcloud-cron /etc/cron.d/nextcloud
+# 앱 소스 복사
+COPY . .
 
-# 권장 CMD는 기본값 유지
-
+# 애플리케이션 실행
+CMD ["npm", "start"]

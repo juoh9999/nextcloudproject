@@ -1,18 +1,9 @@
 version: '3'
 services:
-  nextcloud:
+  app:
     build: .
     ports:
-      - "80:80"
-    volumes:
-      - nextcloud_data:/var/www/html
-    environment:
-      - MYSQL_HOST=your-db-endpoint
-      - MYSQL_DATABASE=nextcloud
-      - MYSQL_USER=nextcloud
-      - MYSQL_PASSWORD=your-password
+      - "80:3000"
     restart: always
-
-volumes:
-  nextcloud_data:
-
+    environment:
+      - NODE_ENV=production
