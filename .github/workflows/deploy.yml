@@ -40,7 +40,7 @@ jobs:
           docker rm nextcloud-app || true
           docker run -d \
             --name nextcloud-app \
-            -p 80:80 \
+            -p 8080:80 \
             -e DB_HOST=${{ secrets.RDS_HOST }} \
             -e DB_NAME=${{ secrets.RDS_DB_NAME }} \
             -e DB_USER=${{ secrets.RDS_USER }} \
@@ -65,7 +65,7 @@ jobs:
           docker rm nextcloud-app || true
           docker run -d \
             --name nextcloud-app \
-            -p 80:80 \
+            -p 8080:80 \
             -e DB_HOST=${{ secrets.RDS_HOST }} \
             -e DB_NAME=${{ secrets.RDS_DB_NAME }} \
             -e DB_USER=${{ secrets.RDS_USER }} \
