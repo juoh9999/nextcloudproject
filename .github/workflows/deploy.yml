@@ -1,0 +1,50 @@
+name: Build and Deploy to EC2
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Login to ECR
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build and Push to ECR
+      run: |
+        docker build -t nextcloud docker/
+        docker tag nextcloud:latest 585685714619.dkr.ecr.ap-northeast-2.amazonaws.com/nextcloud:latest
+        docker push 585685714619.dkr.ecr.ap-northeast-2.amazonaws.com/nextcloud:latest
+
+    - name: Deploy to EC2 via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ec2-user
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 585685714619.dkr.ecr.ap-northeast-2.amazonaws.com
+
+          docker pull 585685714619.dkr.ecr.ap-northeast-2.amazonaws.com/nextcloud:latest
+
+          docker stop nextcloud-app || true
+          docker rm nextcloud-app || true
+
+          docker run -d \
+            --name nextcloud-app \
+            -p 80:80 \
+            -e DB_HOST=${{ secrets.RDS_HOST }} \
+            -e DB_NAME=${{ secrets.RDS_DB_NAME }} \
+            -e DB_USER=${{ secrets.RDS_USER }} \
+            -e DB_PASSWORD=${{ secrets.RDS_PASSWORD }} \
+            -e S3_BUCKET=nextcloud9999 \
+            -e S3_REGION=ap-northeast-2 \
+            -e AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
+            -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
+            585685714619.dkr.ecr.ap-northeast-2.amazonaws.com/nextcloud:latest
+

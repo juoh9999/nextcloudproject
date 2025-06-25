@@ -1,15 +1,35 @@
-# 베이스 이미지 설정
-FROM node:18
+FROM php:8.2-apache
 
-# 애플리케이션 디렉토리 생성 및 설정
-WORKDIR /app
+# 필요한 PHP 확장 설치
+RUN apt-get update && apt-get install -y \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    libpng-dev \
+    libzip-dev \
+    libxml2-dev \
+    libonig-dev \
+    libicu-dev \
+    libxslt1-dev \
+    libbz2-dev \
+    libgmp-dev \
+    unzip \
+    git \
+    curl \
+    && docker-php-ext-install -j$(nproc) \
+       zip pdo pdo_mysql gd intl bz2 gmp xml xsl opcache \
+    && docker-php-ext-enable opcache
 
-# 소스 복사 및 의존성 설치
-COPY package*.json ./
-RUN npm install
+# AWS SDK 설치 (S3 연동용)
+RUN curl -sS https://getcomposer.org/installer | php && \
+    mv composer.phar /usr/local/bin/composer && \
+    composer require aws/aws-sdk-php
 
-# 앱 소스 복사
-COPY . .
+# Apache 설정
+RUN a2enmod rewrite headers env dir mime
 
-# 애플리케이션 실행
-CMD ["npm", "start"]
+# 코드 복사 (src로 제한하거나 .dockerignore 사용 권장)
+COPY . /var/www/html/
+
+# 권한 설정 (옵션)
+RUN chown -R www-data:www-data /var/www/html
+
